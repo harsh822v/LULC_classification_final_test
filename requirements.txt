@@ -1,4 +1,4 @@
 flask
-# tensorflow-cpu
+tensorflow
 numpy
 opencv-python-headless
