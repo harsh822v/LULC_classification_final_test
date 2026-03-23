@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LULC Classifier — AI-GIS Satellite Intelligence</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg-primary:    #060B14;
+      --bg-secondary:  #0D1421;
+      --bg-card:       #111827;
+      --bg-elevated:   #1A2235;
+      --border:        #1E2D45;
+      --border-accent: #2563EB;
+      --text-primary:  #E8EDF5;
+      --text-secondary:#7B8FA8;
+      --text-muted:    #4A5568;
+      --accent-blue:   #2563EB;
+      --accent-cyan:   #06B6D4;
+      --accent-green:  #10B981;
+      --accent-amber:  #F59E0B;
+      --accent-red:    #EF4444;
+      --glow-blue:     rgba(37, 99, 235, 0.25);
+      --glow-cyan:     rgba(6, 182, 212, 0.2);
+      --font-display:  'Syne', sans-serif;
+      --font-mono:     'Space Mono', monospace;
+      --radius-sm:     6px;
+      --radius-md:     12px;
+      --radius-lg:     18px;
+      --radius-xl:     24px;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      font-family: var(--font-display);
+      min-height: 100vh;
+      overflow-x: hidden;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(37,99,235,0.12) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 40% at 90% 80%, rgba(6,182,212,0.07) 0%, transparent 50%);
+    }
+
+    /* ── GRID BACKGROUND ───────────────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 0;
+      background-image:
+        linear-gradient(rgba(37,99,235,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(37,99,235,0.04) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+
+    .page-wrap { position: relative; z-index: 1; }
+
+    /* ── NAV ────────────────────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,11,20,0.85);
+      backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 2rem;
+    }
+    .nav-inner {
+      max-width: 1400px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 64px;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: 12px;
+    }
+    .nav-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--glow-blue);
+    }
+    .nav-title {
+      font-size: 1rem; font-weight: 800; letter-spacing: 0.5px;
+      color: var(--text-primary);
+    }
+    .nav-subtitle {
+      font-size: 0.65rem; font-family: var(--font-mono);
+      color: var(--text-secondary); margin-top: 1px;
+    }
+    .nav-badges { display: flex; gap: 8px; align-items: center; }
+    .badge {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px;
+    }
+    .badge-blue  { background: rgba(37,99,235,0.15); color: var(--accent-blue);  border: 1px solid rgba(37,99,235,0.3); }
+    .badge-green { background: rgba(16,185,129,0.12); color: var(--accent-green); border: 1px solid rgba(16,185,129,0.25); }
+    .badge-amber { background: rgba(245,158,11,0.12); color: var(--accent-amber); border: 1px solid rgba(245,158,11,0.25); }
+
+    /* ── HERO ────────────────────────────────────────────────────── */
+    .hero {
+      max-width: 1400px; margin: 0 auto;
+      padding: 5rem 2rem 2.5rem;
+      text-align: center;
+    }
+    .hero-tag {
+      display: inline-flex; align-items: center; gap: 8px;
+      font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 2px;
+      color: var(--accent-cyan); text-transform: uppercase;
+      background: rgba(6,182,212,0.08); border: 1px solid rgba(6,182,212,0.2);
+      padding: 6px 16px; border-radius: 20px; margin-bottom: 1.5rem;
+    }
+    .hero-tag::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--accent-cyan); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    .hero h1 {
+      font-size: clamp(2.2rem, 5vw, 3.8rem);
+      font-weight: 800; line-height: 1.1; margin-bottom: 1rem;
+      background: linear-gradient(135deg, #E8EDF5 0%, var(--accent-cyan) 50%, var(--accent-blue) 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero p {
+      color: var(--text-secondary); font-size: 1rem; max-width: 680px;
+      margin: 0 auto 2.5rem; line-height: 1.7;
+    }
+
+    /* ── STATS ROW ────────────────────────────────────────────────── */
+    .stats-row {
+      display: flex; justify-content: center; gap: 2rem;
+      flex-wrap: wrap; margin-bottom: 3rem;
+    }
+    .stat-item {
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 1.6rem; font-weight: 800;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .stat-label { font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-muted); letter-spacing: 1px; margin-top: 2px; }
+
+    /* ── MAIN LAYOUT ──────────────────────────────────────────────── */
+    .main {
+      max-width: 1400px; margin: 0 auto; padding: 0 2rem 4rem;
+      display: grid; grid-template-columns: 1fr 400px; gap: 1.5rem;
+    }
+    @media (max-width: 1024px) { .main { grid-template-columns: 1fr; } }
+
+    /* ── CARDS ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .card-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 10px;
+    }
+    .card-header-icon {
+      width: 32px; height: 32px;
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 15px;
+    }
+    .card-title { font-size: 0.85rem; font-weight: 700; color: var(--text-primary); }
+    .card-subtitle { font-family: var(--font-mono); font-size: 0.6rem; color: var(--text-secondary); }
+    .card-body { padding: 1.5rem; }
+
+    /* ── UPLOAD ZONE ────────────────────────────────────────────── */
+    .upload-zone {
+      border: 2px dashed var(--border);
+      border-radius: var(--radius-md);
+      padding: 3rem 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: var(--bg-secondary);
+      position: relative; overflow: hidden;
+    }
+    .upload-zone::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse at center, var(--glow-blue) 0%, transparent 70%);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .upload-zone:hover, .upload-zone.drag-over {
+      border-color: var(--accent-blue);
+      background: rgba(37,99,235,0.05);
+    }
+    .upload-zone:hover::before, .upload-zone.drag-over::before { opacity: 1; }
+    .upload-icon {
+      font-size: 3rem; margin-bottom: 1rem;
+      filter: drop-shadow(0 0 12px var(--accent-blue));
+      display: block;
+    }
+    .upload-title { font-size: 1rem; font-weight: 700; margin-bottom: 0.4rem; }
+    .upload-hint {
+      font-family: var(--font-mono); font-size: 0.7rem;
+      color: var(--text-secondary); margin-bottom: 1.5rem;
+    }
+    .upload-btn {
+      background: linear-gradient(135deg, var(--accent-blue), #1D4ED8);
+      color: white; font-family: var(--font-display); font-weight: 700;
+      font-size: 0.85rem; padding: 10px 24px; border: none;
+      border-radius: var(--radius-sm); cursor: pointer;
+      transition: all 0.2s; letter-spacing: 0.3px;
+      box-shadow: 0 4px 20px rgba(37,99,235,0.3);
+    }
+    .upload-btn:hover { transform: translateY(-1px); box-shadow: 0 6px 25px rgba(37,99,235,0.4); }
+
+    #file-input { display: none; }
+
+    /* ── PREVIEW ────────────────────────────────────────────────── */
+    .preview-section { display: none; margin-top: 1.5rem; }
+    .preview-section.visible { display: block; }
+    .preview-img-wrap {
+      border-radius: var(--radius-md); overflow: hidden;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+    }
+    .preview-img { width: 100%; height: 240px; object-fit: cover; display: block; }
+    .preview-meta {
+      display: flex; gap: 1rem; margin-top: 0.75rem;
+      font-family: var(--font-mono); font-size: 0.65rem; color: var(--text-secondary);
+    }
+    .preview-meta span { display: flex; align-items: center; gap: 5px; }
+
+    /* ── CLASSIFY BTN ────────────────────────────────────────────── */
+    .classify-btn {
+      width: 100%; margin-top: 1.5rem;
+      background: linear-gradient(135deg, #2563EB, #06B6D4);
+      color: white; font-family: var(--font-display); font-weight: 800;
+      font-size: 0.9rem; padding: 14px; border: none;
+      border-radius: var(--radius-md); cursor: pointer;
+      letter-spacing: 0.5px; transition: all 0.3s;
+      box-shadow: 0 4px 24px rgba(37,99,235,0.35);
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    .classify-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 32px rgba(37,99,235,0.45); }
+    .classify-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    /* ── RESULTS ────────────────────────────────────────────────── */
+    .result-section { display: none; margin-top: 1.5rem; }
+    .result-section.visible { display: block; animation: fadeUp 0.4s ease; }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-primary {
+      background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 1.5rem;
+      display: flex; align-items: center; gap: 1.25rem;
+      margin-bottom: 1rem;
+    }
+    .result-icon-wrap {
+      width: 60px; height: 60px; border-radius: var(--radius-md);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; flex-shrink: 0;
+    }
+    .result-class-name { font-size: 1.3rem; font-weight: 800; margin-bottom: 4px; }
+    .result-confidence-bar-wrap { margin-top: 8px; }
+    .result-confidence-label {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-secondary); margin-bottom: 5px;
+      display: flex; justify-content: space-between;
+    }
+    .bar-track {
+      height: 6px; background: var(--bg-primary); border-radius: 3px; overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%; border-radius: 3px;
+      transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .result-stats {
+      display: grid; grid-template-columns: 1fr 1fr;
+      gap: 0.75rem; margin-bottom: 1rem;
+    }
+    .result-stat-item {
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 0.75rem 1rem;
+    }
+    .result-stat-label {
+      font-family: var(--font-mono); font-size: 0.6rem;
+      color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;
+    }
+    .result-stat-value { font-size: 0.95rem; font-weight: 700; margin-top: 4px; }
+
+    /* Top 5 Predictions */
+    .top5-title {
+      font-family: var(--font-mono); font-size: 0.65rem;
+      color: var(--text-secondary); text-transform: uppercase;
+      letter-spacing: 1px; margin-bottom: 0.75rem;
+    }
+    .top5-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; border-radius: var(--radius-sm);
+      margin-bottom: 6px; background: var(--bg-elevated);
+      border: 1px solid var(--border);
+      transition: border-color 0.2s;
+    }
+    .top5-item:hover { border-color: var(--border-accent); }
+    .top5-emoji { font-size: 1.1rem; width: 24px; text-align: center; flex-shrink: 0; }
+    .top5-label { font-size: 0.8rem; flex: 1; }
+    .top5-bar-wrap { flex: 1; }
+    .top5-bar-track { height: 4px; background: var(--bg-primary); border-radius: 2px; overflow: hidden; }
+    .top5-bar-fill { height: 100%; border-radius: 2px; transition: width 0.8s ease; }
+    .top5-pct { font-family: var(--font-mono); font-size: 0.65rem; width: 42px; text-align: right; flex-shrink: 0; }
+
+    /* ── SIDEBAR ────────────────────────────────────────────────── */
+    .sidebar { display: flex; flex-direction: column; gap: 1.5rem; }
+
+    /* Class legend */
+    .class-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
+    .class-item {
+      display: flex; align-items: center; gap: 10px;
+      padding: 8px 10px; border-radius: var(--radius-sm);
+      background: var(--bg-secondary); border: 1px solid var(--border);
+      transition: all 0.2s; cursor: default;
+    }
+    .class-item:hover { border-color: var(--border-accent); background: var(--bg-elevated); }
+    .class-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .class-emoji { font-size: 1rem; width: 20px; text-align: center; }
+    .class-name { font-size: 0.75rem; }
+
+    /* Model info */
+    .info-grid { display: grid; gap: 8px; }
+    .info-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 8px 12px; background: var(--bg-secondary); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); font-size: 0.75rem;
+    }
+    .info-key { font-family: var(--font-mono); color: var(--text-secondary); font-size: 0.65rem; }
+    .info-val { font-weight: 700; color: var(--text-primary); text-align: right; }
+    .info-val.good { color: var(--accent-green); }
+
+    /* ── MAP SECTION ────────────────────────────────────────────── */
+    .map-section {
+      max-width: 1400px; margin: 0 auto;
+      padding: 0 2rem 4rem;
+    }
+    .map-container {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: var(--radius-xl); overflow: hidden;
+    }
+    .map-header {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .map-title-group { display: flex; align-items: center; gap: 10px; }
+    .map-frame {
+      width: 100%; height: 520px; border: none;
+      background: var(--bg-secondary);
+    }
+    .map-loading {
+      height: 520px; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1rem; color: var(--text-secondary);
+      font-family: var(--font-mono); font-size: 0.8rem;
+    }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid var(--border);
+      border-top-color: var(--accent-blue); border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .load-map-btn {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+      color: white; font-family: var(--font-display); font-weight: 700;
+      font-size: 0.8rem; padding: 9px 20px; border: none;
+      border-radius: var(--radius-sm); cursor: pointer; transition: all 0.2s;
+      box-shadow: 0 4px 16px rgba(37,99,235,0.3);
+    }
+    .load-map-btn:hover { transform: translateY(-1px); }
+
+    /* ── FOOTER ────────────────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem;
+      text-align: center;
+      color: var(--text-muted);
+      font-family: var(--font-mono); font-size: 0.65rem;
+      letter-spacing: 0.5px;
+    }
+    footer span { color: var(--text-secondary); }
+
+    /* ── LOADING OVERLAY ─────────────────────────────────────────── */
+    .loading-overlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(6,11,20,0.8); backdrop-filter: blur(10px);
+      z-index: 200; align-items: center; justify-content: center;
+      flex-direction: column; gap: 1.5rem;
+    }
+    .loading-overlay.active { display: flex; }
+    .loading-title { font-size: 1.1rem; font-weight: 700; }
+    .loading-sub { font-family: var(--font-mono); font-size: 0.75rem; color: var(--text-secondary); }
+
+    /* ── TOAST ──────────────────────────────────────────────────── */
+    .toast {
+      position: fixed; bottom: 2rem; right: 2rem; z-index: 300;
+      background: var(--bg-elevated); border: 1px solid var(--border);
+      border-radius: var(--radius-md); padding: 1rem 1.25rem;
+      font-size: 0.85rem; min-width: 280px;
+      transform: translateY(100px); opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .toast.show { transform: translateY(0); opacity: 1; }
+    .toast.error { border-color: rgba(239,68,68,0.4); }
+  </style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- NAV -->
+  <nav>
+    <div class="nav-inner">
+      <div class="nav-brand">
+        <div class="nav-icon">🛰️</div>
+        <div>
+          <div class="nav-title">LULC Classifier</div>
+          <div class="nav-subtitle">AI-GIS · Sentinel-2 Intelligence Platform</div>
+        </div>
+      </div>
+      <div class="nav-badges">
+        <span class="badge badge-blue">ResNet-50</span>
+        <span class="badge badge-green">EuroSAT</span>
+        <span class="badge badge-amber" id="model-status-badge">⚡ Loading...</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">Sentinel-2 · Deep Learning · GIS Visualization</div>
+    <h1>Satellite Land Use &<br/>Land Cover Classification</h1>
+    <p>
+      AI-powered LULC mapping using ResNet-50 transfer learning trained on the EuroSAT dataset.
+      Upload satellite imagery to classify land cover with spatial GIS visualization for
+      urban planning, agriculture assessment, and environmental monitoring.
+    </p>
+    <div class="stats-row">
+      <div class="stat-item">
+        <div class="stat-value">10</div>
+        <div class="stat-label">Land Classes</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" id="stat-acc">—</div>
+        <div class="stat-label">Val Accuracy</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">27K+</div>
+        <div class="stat-label">Training Images</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value">ResNet-50</div>
+        <div class="stat-label">Architecture</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN CONTENT -->
+  <div class="main">
+
+    <!-- LEFT COLUMN -->
+    <div>
+
+      <!-- Upload Card -->
+      <div class="card" style="margin-bottom:1.5rem">
+        <div class="card-header">
+          <div class="card-header-icon">📡</div>
+          <div>
+            <div class="card-title">Satellite Image Classification</div>
+            <div class="card-subtitle">Upload Sentinel-2 imagery or any satellite image</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="upload-zone" id="drop-zone">
+            <span class="upload-icon">🛰️</span>
+            <div class="upload-title">Drop Satellite Image Here</div>
+            <div class="upload-hint">Supported: PNG · JPG · JPEG · TIF · TIFF &nbsp;|&nbsp; Max 32MB</div>
+            <button class="upload-btn" onclick="document.getElementById('file-input').click()">
+              Browse Files
+            </button>
+            <input type="file" id="file-input" accept=".png,.jpg,.jpeg,.tif,.tiff" />
+          </div>
+
+          <!-- Preview -->
+          <div class="preview-section" id="preview-section">
+            <div class="preview-img-wrap">
+              <img id="preview-img" class="preview-img" src="" alt="Preview" />
+            </div>
+            <div class="preview-meta">
+              <span>📄 <span id="file-name">—</span></span>
+              <span>💾 <span id="file-size">—</span></span>
+              <span>🖼️ <span id="file-type">—</span></span>
+            </div>
+          </div>
+
+          <button class="classify-btn" id="classify-btn" disabled onclick="classifyImage()">
+            <span>🔍</span> Classify Land Cover
+          </button>
+        </div>
+      </div>
+
+      <!-- Results Card -->
+      <div class="card" id="results-card" style="display:none">
+        <div class="card-header">
+          <div class="card-header-icon">✅</div>
+          <div>
+            <div class="card-title">Classification Results</div>
+            <div class="card-subtitle">ResNet-50 · Transfer Learning · EuroSAT</div>
+          </div>
+        </div>
+        <div class="card-body">
+
+          <!-- Primary Result -->
+          <div class="result-primary" id="result-primary">
+            <div class="result-icon-wrap" id="result-icon-wrap"></div>
+            <div style="flex:1">
+              <div class="result-class-name" id="result-class-name">—</div>
+              <div style="font-family:var(--font-mono);font-size:0.7rem;color:var(--text-secondary)" id="result-class-key">—</div>
+              <div class="result-confidence-bar-wrap">
+                <div class="result-confidence-label">
+                  <span>Confidence</span><span id="result-conf-pct">—</span>
+                </div>
+                <div class="bar-track">
+                  <div class="bar-fill" id="result-conf-bar" style="width:0%"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats -->
+          <div class="result-stats">
+            <div class="result-stat-item">
+              <div class="result-stat-label">Inference Time</div>
+              <div class="result-stat-value" id="stat-inf-time">—</div>
+            </div>
+            <div class="result-stat-item">
+              <div class="result-stat-label">Model Mode</div>
+              <div class="result-stat-value" id="stat-model-mode">—</div>
+            </div>
+            <div class="result-stat-item">
+              <div class="result-stat-label">Timestamp</div>
+              <div class="result-stat-value" id="stat-timestamp" style="font-size:0.75rem">—</div>
+            </div>
+            <div class="result-stat-item">
+              <div class="result-stat-label">Architecture</div>
+              <div class="result-stat-value" style="font-size:0.75rem">ResNet-50</div>
+            </div>
+          </div>
+
+          <!-- Top 5 -->
+          <div class="top5-title">TOP-5 PREDICTIONS</div>
+          <div id="top5-list"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIDEBAR -->
+    <div class="sidebar">
+
+      <!-- Model Status -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">🤖</div>
+          <div>
+            <div class="card-title">Model Information</div>
+            <div class="card-subtitle">ResNet-50 Transfer Learning</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="info-grid" id="model-info-grid">
+            <div class="info-row">
+              <span class="info-key">Architecture</span>
+              <span class="info-val">ResNet-50</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Dataset</span>
+              <span class="info-val">EuroSAT / Sentinel-2</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Image Size</span>
+              <span class="info-val">64 × 64 px</span>
+            </div>
+            <div class="info-row">
+              <span class="info-key">Classes</span>
+              <span class="info-val">10 LULC Categories</span>
+            </div>
+            <div class="info-row" id="acc-row" style="display:none">
+              <span class="info-key">Val Accuracy</span>
+              <span class="info-val good" id="model-acc">—</span>
+            </div>
+            <div class="info-row" id="f1-row" style="display:none">
+              <span class="info-key">F1-Score</span>
+              <span class="info-val good" id="model-f1">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Land Classes -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">🗺️</div>
+          <div>
+            <div class="card-title">Land Cover Classes</div>
+            <div class="card-subtitle">10 EuroSAT Categories</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="class-grid">
+            {% for cls in classes %}
+            <div class="class-item">
+              <div class="class-dot" style="background:{{ class_meta[cls]['color'] }}"></div>
+              <span class="class-emoji">{{ class_meta[cls]['emoji'] }}</span>
+              <span class="class-name">{{ class_meta[cls]['label'] }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <!-- Tech Stack -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-header-icon">⚙️</div>
+          <div>
+            <div class="card-title">Technology Stack</div>
+            <div class="card-subtitle">AI · GIS · Remote Sensing</div>
+          </div>
+        </div>
+        <div class="card-body">
+          <div class="info-grid">
+            {% set techs = [
+              ('🧠','Deep Learning','TensorFlow / Keras'),
+              ('🔬','Architecture','ResNet-50 CNN'),
+              ('🛰️','Satellite Data','Sentinel-2 / EuroSAT'),
+              ('🗺️','GIS Tools','Folium · GeoPandas'),
+              ('👁️','Image Proc.','OpenCV · Pillow'),
+              ('🌐','Backend','Python Flask'),
+              ('📊','Analytics','Scikit-learn'),
+              ('🐳','Deploy','Docker · Gunicorn')
+            ] %}
+            {% for icon, key, val in techs %}
+            <div class="info-row">
+              <span class="info-key">{{ icon }} {{ key }}</span>
+              <span class="info-val" style="font-size:0.7rem">{{ val }}</span>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- GIS MAP SECTION -->
+  <div class="map-section">
+    <div class="map-container">
+      <div class="map-header">
+        <div class="map-title-group">
+          <div class="card-header-icon">🗺️</div>
+          <div>
+            <div class="card-title">GIS Interactive Map — LULC Spatial Distribution</div>
+            <div class="card-subtitle">Gujarat Region · Sentinel-2 Classification · BISAG-N Context</div>
+          </div>
+        </div>
+        <button class="load-map-btn" id="load-map-btn" onclick="loadMap()">
+          🛰️ Load GIS Map
+        </button>
+      </div>
+      <div id="map-container">
+        <div class="map-loading">
+          <span style="font-size:3rem">🌏</span>
+          <span>Click "Load GIS Map" to view LULC spatial classification</span>
+          <span style="font-size:0.7rem">Interactive Folium map with multi-layer satellite tiles</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- .page-wrap -->
+
+<!-- LOADING OVERLAY -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="spinner"></div>
+  <div class="loading-title">🔬 Classifying Satellite Image...</div>
+  <div class="loading-sub">ResNet-50 inference in progress</div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── Globals ────────────────────────────────────────────────────────────────
+let selectedFile = null;
+
+// ─── Init ────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  fetchModelInfo();
+  setupDragDrop();
+  document.getElementById('file-input').addEventListener('change', e => {
+    if (e.target.files[0]) handleFile(e.target.files[0]);
+  });
+});
+
+async function fetchModelInfo() {
+  try {
+    const res  = await fetch('/api/info');
+    const data = await res.json();
+    const cfg  = data.model_config || {};
+    const badge = document.getElementById('model-status-badge');
+
+    if (data.model_ready) {
+      badge.textContent = '✅ Model Ready';
+      badge.className = 'badge badge-green';
+    } else {
+      badge.textContent = '🔶 Demo Mode';
+      badge.className = 'badge badge-amber';
+    }
+
+    document.getElementById('stat-acc').textContent =
+      cfg.accuracy ? (cfg.accuracy * 100).toFixed(1) + '%' : '—';
+
+    if (cfg.accuracy) {
+      document.getElementById('acc-row').style.display = 'flex';
+      document.getElementById('model-acc').textContent = (cfg.accuracy * 100).toFixed(2) + '%';
+    }
+    if (cfg.f1_score) {
+      document.getElementById('f1-row').style.display = 'flex';
+      document.getElementById('model-f1').textContent = cfg.f1_score.toFixed(4);
+    }
+  } catch (e) {
+    console.warn('Model info fetch failed:', e);
+  }
+}
+
+// ─── Drag & Drop ─────────────────────────────────────────────────────────────
+function setupDragDrop() {
+  const zone = document.getElementById('drop-zone');
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+  zone.addEventListener('dragleave', ()  => zone.classList.remove('drag-over'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault(); zone.classList.remove('drag-over');
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  zone.addEventListener('click', () => document.getElementById('file-input').click());
+}
+
+// ─── File Handling ────────────────────────────────────────────────────────────
+function handleFile(file) {
+  selectedFile = file;
+  const reader = new FileReader();
+  reader.onload = e => {
+    document.getElementById('preview-img').src = e.target.result;
+    document.getElementById('file-name').textContent = file.name;
+    document.getElementById('file-size').textContent = formatSize(file.size);
+    document.getElementById('file-type').textContent = file.type || 'image/*';
+    document.getElementById('preview-section').classList.add('visible');
+    document.getElementById('classify-btn').disabled = false;
+    document.getElementById('results-card').style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+}
+
+function formatSize(bytes) {
+  if (bytes < 1024)       return bytes + ' B';
+  if (bytes < 1024*1024)  return (bytes/1024).toFixed(1) + ' KB';
+  return (bytes/1024/1024).toFixed(1) + ' MB';
+}
+
+// ─── Classification ──────────────────────────────────────────────────────────
+async function classifyImage() {
+  if (!selectedFile) return;
+  showLoading(true);
+
+  const fd = new FormData();
+  fd.append('file', selectedFile);
+
+  try {
+    const res  = await fetch('/predict', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (data.error) { showToast('❌ ' + data.error, true); return; }
+    displayResults(data);
+  } catch (e) {
+    showToast('❌ Server error. Please try again.', true);
+  } finally {
+    showLoading(false);
+  }
+}
+
+function displayResults(data) {
+  document.getElementById('results-card').style.display = 'block';
+
+  // Primary result
+  const iconWrap = document.getElementById('result-icon-wrap');
+  iconWrap.style.background = data.color + '22';
+  iconWrap.style.border = `2px solid ${data.color}44`;
+  iconWrap.innerHTML = `<span style="font-size:28px">${data.emoji}</span>`;
+
+  document.getElementById('result-class-name').textContent = data.label;
+  document.getElementById('result-class-name').style.color = data.color;
+  document.getElementById('result-class-key').textContent  = data.predicted_class;
+
+  const confPct = (data.confidence * 100).toFixed(2) + '%';
+  document.getElementById('result-conf-pct').textContent = confPct;
+  document.getElementById('result-conf-pct').style.color = data.color;
+
+  const bar = document.getElementById('result-conf-bar');
+  bar.style.background = `linear-gradient(90deg, ${data.color}88, ${data.color})`;
+  setTimeout(() => { bar.style.width = (data.confidence * 100) + '%'; }, 100);
+
+  // Stats
+  document.getElementById('stat-inf-time').textContent  = data.inference_time_ms + ' ms';
+  document.getElementById('stat-model-mode').textContent = data.model_mode;
+  document.getElementById('stat-timestamp').textContent  = data.timestamp;
+
+  // Top 5
+  const top5 = document.getElementById('top5-list');
+  top5.innerHTML = '';
+  data.top5.forEach((item, idx) => {
+    const pct = (item.confidence * 100).toFixed(1);
+    top5.innerHTML += `
+      <div class="top5-item">
+        <div class="top5-emoji">${item.emoji}</div>
+        <div class="top5-label" style="color:${idx===0?item.color:'var(--text-primary)'};
+             font-weight:${idx===0?'700':'400'}">${item.label}</div>
+        <div class="top5-bar-wrap">
+          <div class="top5-bar-track">
+            <div class="top5-bar-fill" id="bar5-${idx}"
+                 style="width:0%;background:${item.color}"></div>
+          </div>
+        </div>
+        <div class="top5-pct" style="color:${item.color}">${pct}%</div>
+      </div>`;
+  });
+  setTimeout(() => {
+    data.top5.forEach((item, idx) => {
+      const bar = document.getElementById(`bar5-${idx}`);
+      if (bar) bar.style.width = (item.confidence * 100) + '%';
+    });
+  }, 150);
+
+  document.getElementById('results-card').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// ─── Map ──────────────────────────────────────────────────────────────────────
+async function loadMap() {
+  const container = document.getElementById('map-container');
+  const btn       = document.getElementById('load-map-btn');
+  btn.disabled    = true;
+  btn.textContent = '⏳ Loading...';
+
+  container.innerHTML = `<div class="map-loading">
+    <div class="spinner"></div>
+    <span>Generating GIS classification map...</span>
+    <span style="font-size:0.7rem;color:var(--text-muted)">Folium · Sentinel-2 · Gujarat Region</span>
+  </div>`;
+
+  try {
+    const res  = await fetch('/api/map');
+    const data = await res.json();
+    container.innerHTML = data.map_html;
+    btn.textContent = '🔄 Reload Map';
+    btn.disabled    = false;
+  } catch (e) {
+    container.innerHTML = `<div class="map-loading" style="color:var(--accent-red)">
+      ❌ Failed to load map. Server may be unavailable.
+    </div>`;
+    btn.textContent = '🛰️ Retry';
+    btn.disabled    = false;
+  }
+}
+
+// ─── Utilities ────────────────────────────────────────────────────────────────
+function showLoading(show) {
+  document.getElementById('loading-overlay').classList.toggle('active', show);
+}
+
+function showToast(msg, isError=false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'toast' + (isError ? ' error' : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3500);
+}
+</script>
+</body>
+</html>
