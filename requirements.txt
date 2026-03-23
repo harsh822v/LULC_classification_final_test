@@ -1,4 +1,4 @@
-tensorflow
-gradio
+flask
+tensorflow-cpu
 numpy
-pillow
+opencv-python-headless
