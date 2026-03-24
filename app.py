@@ -168,7 +168,8 @@ from datetime import datetime
 app = Flask(__name__)
 
 # Load model
-model = load_model("lulc_efficientnetb3.keras", compile=False)
+model = load_model("lulc-efficientnetb3_model.h5", compile=False)
+# model = load_model("lulc_efficientnetb3.keras", compile=False)
 
 CLASS_NAMES = [
     "AnnualCrop", "Forest", "HerbaceousVegetation",
